@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: aquaforecast
-    runtime: docker
-    plan: free
-    healthCheckPath: /api/cities
-    envVars:
-      - {key: AQUA_POLL_SECONDS, value: "600"}
