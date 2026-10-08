@@ -4,7 +4,34 @@ import json, urllib.request, datetime as dt
 from .db import conn, LOCK
 FC = "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=precipitation_sum&forecast_days=7&timezone=auto"
 AR = "https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={a}&end_date={b}&daily=precipitation_sum&timezone=auto"
-def _get(u): return json.load(urllib.request.urlopen(u, timeout=20))
+import time, threading, urllib.error
+_UA = "AquaForecast/5 (hackathon demo; non-commercial; contact via project repo)"
+_GAP, _LAST, _GLOCK, _PRE = 0.6, [0.0], threading.Lock(), {}
+def _get(u, tries=3):
+    """GET json. Serves a prefetched per-city response if present; spaces out Open-Meteo calls; retries 429/5xx honouring Retry-After."""
+    hit = _PRE.pop(u, None)
+    if hit and time.monotonic() - hit[0] < 300: return hit[1]
+    for i in range(tries):
+        if "open-meteo.com" in u:
+            with _GLOCK:
+                w = _LAST[0] + _GAP - time.monotonic()
+                if w > 0: time.sleep(w)
+                _LAST[0] = time.monotonic()
+        try: return json.load(urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": _UA}), timeout=20))
+        except urllib.error.HTTPError as e:
+            if e.code not in (429, 500, 502, 503, 504) or i == tries - 1: raise
+            try: ra = float(e.headers.get("Retry-After", ""))
+            except (TypeError, ValueError): ra = 0.0
+            time.sleep(min(max(ra, 4.0 * 2 ** i), 30.0))
+def _prefetch(template, cities):
+    """ONE multi-location request for all cities (Open-Meteo accepts comma-separated coordinates); each city's slice is cached under its own URL so the per-city ingest code is unchanged. Failure is silent here: the normal per-city call then runs and records the real error."""
+    ids = list(cities)
+    try:
+        j = _get(template.format(lat=",".join(str(cities[i]["lat"]) for i in ids), lon=",".join(str(cities[i]["lon"]) for i in ids)))
+        j = [j] if isinstance(j, dict) else j
+        if len(j) != len(ids): return
+        for i, r in zip(ids, j): _PRE[template.format(**cities[i])] = (time.monotonic(), r)
+    except Exception: pass
 def now(): return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 def _log(dataset, cid, rec, valid, err, src="open-meteo"):
     with LOCK:
@@ -36,6 +63,7 @@ def history_due(cid):
     r = conn().execute("SELECT MAX(ts) FROM data_ingestion_logs WHERE dataset='daily precipitation archive' AND city_id=? AND ok=1", (cid,)).fetchone()[0]
     return not r or (dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(r)).total_seconds() > 86400
 def poll_all(cities):
+    _prefetch(FC, cities); _prefetch(FCW, cities)
     for cid, c in cities.items():
         ingest_forecast(cid, c); ingest_weather_forecast(cid, c); ingest_flood(cid, c)
         if history_due(cid): ingest_history(cid, c)
