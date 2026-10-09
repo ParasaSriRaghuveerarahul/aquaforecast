@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: aquaforecast
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/cities
+    envVars:
+      - {key: AQUA_POLL_SECONDS, value: "1200"}
+      - {key: CWC_BULLETIN_URL, sync: false}
+      - {key: ALERT_PHONES, sync: false}
+      - {key: ALERT_PROVIDER, value: ntfy}
+      - {key: NTFY_TOPIC, sync: false}
+      - {key: ALERT_ADMIN_TOKEN, sync: false}
