@@ -1,0 +1,16 @@
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE TABLE cities(id TEXT PRIMARY KEY,name TEXT NOT NULL,state TEXT,country TEXT DEFAULT 'India',latitude DOUBLE PRECISION,longitude DOUBLE PRECISION,population BIGINT,area_sq_km REAL,geometry geometry(MultiPolygon,4326),timezone TEXT DEFAULT 'Asia/Kolkata',data_availability JSONB,created_at TIMESTAMPTZ DEFAULT now(),updated_at TIMESTAMPTZ DEFAULT now());
+CREATE TABLE zones(id SERIAL PRIMARY KEY,city_id TEXT REFERENCES cities,name TEXT,geometry geometry(MultiPolygon,4326),population INT);
+CREATE TABLE reservoirs(id SERIAL PRIMARY KEY,city_id TEXT REFERENCES cities,name TEXT,capacity_ml DOUBLE PRECISION,location geometry(Point,4326),source TEXT);
+CREATE TABLE reservoir_observations(reservoir_id INT REFERENCES reservoirs,ts TIMESTAMPTZ,storage_ml DOUBLE PRECISION,inflow_ml DOUBLE PRECISION,source TEXT,status TEXT CHECK(status IN('OFFICIAL','ESTIMATED','MODELED','SIMULATED')),PRIMARY KEY(reservoir_id,ts));
+CREATE TABLE rainfall_observations(station_id TEXT,city_id TEXT REFERENCES cities,ts TIMESTAMPTZ,precip_mm REAL,source TEXT,PRIMARY KEY(station_id,ts));
+CREATE TABLE weather_forecasts(city_id TEXT REFERENCES cities,ts DATE,precip_mm REAL,fetched_at TIMESTAMPTZ,source TEXT,PRIMARY KEY(city_id,ts));
+CREATE TABLE groundwater_observations(station_id TEXT,city_id TEXT REFERENCES cities,ts DATE,depth_m_bgl REAL,source TEXT,PRIMARY KEY(station_id,ts));
+CREATE TABLE water_demand(city_id TEXT REFERENCES cities,ts DATE,sector TEXT,ml_day REAL,status TEXT,PRIMARY KEY(city_id,ts,sector));
+CREATE TABLE risk_predictions(id SERIAL PRIMARY KEY,city_id TEXT REFERENCES cities,run_at TIMESTAMPTZ,horizon_days INT,stress TEXT,confidence REAL,model_version TEXT);
+CREATE TABLE simulation_runs(id SERIAL PRIMARY KEY,city_id TEXT,ts TIMESTAMPTZ DEFAULT now(),request JSONB,result JSONB);
+CREATE TABLE optimization_runs(id SERIAL PRIMARY KEY,city_id TEXT,ts TIMESTAMPTZ DEFAULT now(),plan JSONB,delay_days INT);
+CREATE TABLE alerts(id SERIAL PRIMARY KEY,city_id TEXT,ts TIMESTAMPTZ DEFAULT now(),severity TEXT,reason TEXT,area TEXT,action TEXT);
+CREATE TABLE data_sources(id SERIAL PRIMARY KEY,name TEXT,url TEXT,update_frequency TEXT,access_method TEXT);
+CREATE TABLE data_ingestion_logs(id SERIAL PRIMARY KEY,source TEXT,dataset TEXT,city_id TEXT,ts TIMESTAMPTZ,records_received INT,records_valid INT,records_rejected INT,ok BOOL,error TEXT);
+CREATE INDEX ON zones USING gist(geometry);CREATE INDEX ON reservoirs USING gist(location);CREATE INDEX ON reservoir_observations(ts);CREATE INDEX ON rainfall_observations(city_id,ts);
