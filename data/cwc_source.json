@@ -1,4 +1,0 @@
-{
-  "_note": "Where the backend downloads the CWC weekly bulletin PDF. Override with the CWC_BULLETIN_URL environment variable. A Google Drive share link is converted to a direct download (the file must be shared as 'Anyone with the link'). Replace the file at the same link each Thursday, or point this at the CWC portal PDF if it allows scripted downloads.",
-  "url": "https://drive.google.com/file/d/1_0_GqP8Lks2PTMdB6itm3Rm_VgOVfSOt/view?usp=sharing"
-}
