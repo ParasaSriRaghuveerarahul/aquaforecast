@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: aquaforecast
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/cities
+    envVars:
+      - {key: AQUA_POLL_SECONDS, value: "1200"}
+      - {key: CWC_BULLETIN_URL, sync: false}
+      - {key: ALERT_PHONES, sync: false}
+      - {key: ALERT_PROVIDER, sync: false}
+      - {key: ALERT_ADMIN_TOKEN, sync: false}
+      - {key: TWILIO_ACCOUNT_SID, sync: false}
+      - {key: TWILIO_AUTH_TOKEN, sync: false}
+      - {key: TWILIO_FROM, sync: false}
