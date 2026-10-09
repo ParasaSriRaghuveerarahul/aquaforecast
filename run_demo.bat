@@ -1,6 +1,6 @@
 @echo off
 rem One-command demo. Edit the topic name below, then double-click.
-set NTFY_TOPIC=aquaforecast-CHANGE-ME-4821
+set NTFY_TOPIC=aquaforecast-rahul-4821
 set ALERT_PROVIDER=ntfy
 set ALERT_PHONES=9876543210
 cd /d "%~dp0backend"
